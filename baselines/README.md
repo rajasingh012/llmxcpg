@@ -22,8 +22,35 @@ In general, we used this version of packages when running the experiments:
 
 For an exhaustive list of all the packages, please refer to [requirements.txt](https://github.com/ICL-ml4csec/VulBERTa/blob/main/requirements.txt "requirements.txt") file.
 
-**Running the baselines**
+**Running**
 
 - To replicate the results for `VulBERTA-MLP`, execute the code in the following file: `./VulBERTa/Evaluation_VulBERTa-MLP.ipynb`
 - To replicate the results for `VulBERTA-CNN`, execute the code in the following file: `./VulBERTa/Finetuning+evaluation_VulBERTa-CNN.ipynb`
 - For `VulBERTA-CNN`, training the model is optional, just need to run the `TEST_ONLY` setting.
+
+## ReGVD
+
+The baseline is adopted from the implementation of the paper: ReGVD: Revisiting Graph Neural Networks for Vulnerability Detection, which can be found [here](https://github.com/daiquocnguyen/GNN-ReGVD.git)
+
+**Requirements**
+
+- Python 3.7
+- Pytorch 1.9
+- Transformer 4.4
+
+**Set up**
+
+- Please download the datasets [here](https://drive.google.com/file/d/13XuKJAtNQEfr9tRnoaM8BgIoFAx5Cged/view?usp=sharing), extract, and put them in the `./GNN-ReGVD/dataset` directory.
+- Pleas download the model weight [here](https://drive.google.com/file/d/1FFhKJBbX4iGe2TmEcSrCCmmb30FKcFET/view?usp=sharing), extract, and put them in the `./GNN-ReGVD/code/saved_models` directory.
+
+**Running**
+To replicate the result for this baseline, please go to the directory `./GNN-ReGVD` and run the following command:
+
+```
+cd code
+python run.py --output_dir=./saved_models/regcn_l2_hs128_uni_ws5_lr5e4 --model_type=roberta --tokenizer_name=microsoft/graphcodebert-base --model_name_or_path=microsoft/graphcodebert-base \
+	--do_eval --do_test --do_train --train_data_file=../dataset/train.jsonl --eval_data_file=../dataset/valid.jsonl --test_data_file=../dataset/sven.jsonl \
+	--block_size 400 --train_batch_size 128 --eval_batch_size 128 --max_grad_norm 1.0 --evaluate_during_training \
+	--gnn ReGCN --learning_rate 5e-4 --epoch 100 --hidden_size 128 --num_GNN_layers 2 --format uni --window_size 5 \
+	--seed 123456 2>&1 | tee $logp/training_log.txt
+```
