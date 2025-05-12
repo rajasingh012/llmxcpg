@@ -54,3 +54,18 @@ python run.py --output_dir=./saved_models/regcn_l2_hs128_uni_ws5_lr5e4 --model_t
 	--gnn ReGCN --learning_rate 5e-4 --epoch 100 --hidden_size 128 --num_GNN_layers 2 --format uni --window_size 5 \
 	--seed 123456 2>&1 | tee $logp/training_log.txt
 ```
+
+## VulSim
+
+The baseline is adopted from the implementation of the paper: VulSim: Leveraging Similarity of Multi-Dimensional Neighbor Embeddings for Vulnerability Detection, which can be found [here](https://github.com/SamihaShimmi/VulSim.git)
+
+**Running**
+
+- To run `code2vec`, please download the data for it [here](https://drive.google.com/file/d/1-zaFX1EeMLuD-wAouyhGIgh8opNFnHOu/view?usp=sharing) and put it in the directory `./VulSim/dx2021/astminer/dataset`. Then, go to the directory `./VulSim/dx2021/astminer/` please follow the instruction of `astminer` [here](https://github.com/dcoimbra/dx2021) with the data as follows: `{train: train2.jsonl, validation: valid2.jsonl, test:sven.jsonl}`.
+
+
+- To run `SBERT`, following the original code of `VulSim`, please follow this instruction [here](https://towardsdatascience.com/sbert-vs-data2vec-on-text-classification-e3c35b19c949) to install the dependency. Then you can run the python file `./VulSim/extract_sbert.py` to extract the embeddings.
+
+- To run `SBERT`, following the original code of `VulSim`, please follow this instruction [here](https://github.com/microsoft/CodeXGLUE/tree/main/Code-Code/Defect-detection) to install the dependency. Then you can run the python file `./VulSim/extract_codebert.py` to extract the embeddings.
+
+- After gathering all embeddings from `code2vec, sbert, codebert`, please follow the instruction from the file `./VulSim/VulSim_classifier/README.md` to take the correlation and train the decision-tree classifier.
