@@ -30,7 +30,7 @@ WORKDIR /app
 RUN printf '%s\n' \
     'from huggingface_hub import hf_hub_download' \
     'repo_id = "qcri-cs/llmxcpg-code"' \
-    'filename = "all_srouce_code.zip"  # Note the spelling "srouce" instead of "source"' \
+    'filename = "all_source_code.zip"' \
     'print(f"Attempting to download {filename} from {repo_id}...")' \
     'file_path = hf_hub_download(repo_id=repo_id, filename=filename, repo_type="dataset", local_dir="/app")' \
     'print(f"Successfully downloaded to {file_path}")' > download_dataset.py
