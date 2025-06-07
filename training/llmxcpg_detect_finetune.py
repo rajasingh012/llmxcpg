@@ -111,7 +111,7 @@ def setup_trainer(model, tokenizer, train_dataset, eval_dataset, args, logger):
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         num_train_epochs=args.epochs,
         max_steps=0,
-        warmup_ratio=0.15,
+        warmup_ratio=0.10,
         learning_rate=args.learning_rate,
         fp16=not torch.cuda.is_bf16_supported(),
         bf16=torch.cuda.is_bf16_supported(),
@@ -157,14 +157,14 @@ def parse_args():
     parser.add_argument("--max_seq_length", type=int, default=8128, help="Maximum sequence length")
     parser.add_argument("--batch_size", type=int, default=4, help="Training batch size per device")
     parser.add_argument("--gradient_accumulation_steps", type=int, default=2)
-    parser.add_argument("--learning_rate", type=float, default=1e-4)
-    parser.add_argument("--epochs", type=int, default=1)
+    parser.add_argument("--learning_rate", type=float, default=4e-4)
+    parser.add_argument("--epochs", type=int, default=2)
     parser.add_argument("--seed", type=int, default=1337)
-    parser.add_argument("--eval_split_ratio", type=float, default=0.0001, help="Proportion of the dataset to include in the evaluation split")
+    parser.add_argument("--eval_split_ratio", type=float, default=0.1, help="Proportion of the dataset to include in the evaluation split")
 
     parser.add_argument("--lora_r", type=int, default=32, help="LoRA attention dimension (rank)")
     parser.add_argument("--lora_alpha", type=int, default=64, help="Alpha parameter for LoRA scaling")
-    parser.add_argument("--lora_dropout", type=float, default=0.05, help="Dropout probability for LoRA layers")
+    parser.add_argument("--lora_dropout", type=float, default=0.1, help="Dropout probability for LoRA layers")
 
     parser.add_argument("--num_proc", type=int, default=16, help="Number of processes for data processing")
     parser.add_argument("--experiment_name", type=str, default="LLMxCPG-D", help="Name of the experiment for logging and output directory")

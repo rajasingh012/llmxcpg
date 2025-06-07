@@ -121,7 +121,7 @@ class ModelHandler:
         
         model, tokenizer = FastLanguageModel.from_pretrained(
             model_name=base_model_name,
-            max_seq_length=16384,
+            max_seq_length=8128,
         )
         
         yes_token_id = tokenizer.encode(self.config.YES_TOKEN, add_special_tokens=False)[0]
@@ -306,7 +306,7 @@ def parse_args():
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Run model inference with a specified threshold")
     parser.add_argument('--base-model', required=True, help="Base model name or path")
-    parser.add_argument('--model-path', required=True, help="Path to the fine-tuned model")
+    parser.add_argument('--model-path', required=True, help="Path to the LoRA adapters")
     parser.add_argument('--dataset-path', required=True, help="Path to the dataset JSON file")
     parser.add_argument('--threshold', type=float, default=0.5, help="Classification threshold")
     parser.add_argument('--output-dir', default=Config.OUTPUT_DIR, help="Directory to save output files")

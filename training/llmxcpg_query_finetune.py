@@ -25,13 +25,13 @@ def load_json_dataset(file_path: str, eval_split_ratio: float = 0.1) -> tuple[Da
     with open(file_path, 'r') as f:
         data = json.load(f)
 
-    with open("query_system_prompt.txt", 'r') as f:
+    with open("./../prompts/query_system_prompt_new.txt", 'r') as f: # TODO: CHANGE BEFORE PUSH
         system_prompt = f.read()
 
     conversations = []
     for item in data:
         conv = [
-            {"role": "user", "content": f"{system_prompt}\n{item['instruction']}\n{item['input']}".strip()},
+            {"role": "user", "content": f"{system_prompt}\n{item['instruction']}\n\n## Code snippet:\n```\n{item['input']}\n```".strip()},
             {"role": "assistant", "content": item['output']}
         ]
         conversations.append({"conversations": conv})
@@ -82,7 +82,7 @@ def setup_model_and_tokenizer(args, logger):
         r=args.rank,
         target_modules=target_modules,
         lora_alpha=args.alpha,
-        lora_dropout=0.05,
+        lora_dropout=0.1,
         bias="none",
         use_gradient_checkpointing="unsloth",
         random_state=args.seed,
@@ -92,7 +92,7 @@ def setup_model_and_tokenizer(args, logger):
 
     tokenizer = get_chat_template(
         tokenizer,
-        chat_template="qwen",
+        chat_template="qwen2.5",
     )
 
     return model, tokenizer
@@ -102,7 +102,7 @@ def setup_trainer(model, tokenizer, train_dataset, eval_dataset, args, logger):
     training_args = TrainingArguments(
         per_device_train_batch_size=args.batch_size,
         gradient_accumulation_steps=args.gradient_accumulation_steps,
-        warmup_ratio=0.15,
+        warmup_ratio=0.10,
         num_train_epochs=args.epochs,
         max_steps=args.max_steps,
         learning_rate=args.learning_rate,
@@ -150,12 +150,12 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("--model_name", type=str, required=True)
     parser.add_argument("--dataset_path", type=str, required=True)
-    parser.add_argument("--max_seq_length", type=int, default=25000)
+    parser.add_argument("--max_seq_length", type=int, default=28000)
     parser.add_argument("--batch_size", type=int, default=4)
     parser.add_argument("--gradient_accumulation_steps", type=int, default=1)
-    parser.add_argument("--epochs", type=int, default=1)
+    parser.add_argument("--epochs", type=int, default=4)
     parser.add_argument("--max_steps", type=int, default=0)
-    parser.add_argument("--learning_rate", type=float, default=1e-4)
+    parser.add_argument("--learning_rate", type=float, default=2e-4)
     parser.add_argument("--weight_decay", type=float, default=0.01)
     parser.add_argument("--logging_steps", type=int, default=2)
     parser.add_argument("--num_proc", type=int, default=16)
@@ -164,7 +164,7 @@ def parse_args():
     parser.add_argument("--output_dir", type=str, default="./models")
     parser.add_argument("--eval_split_ratio", type=float, default=0.1)
     parser.add_argument("--rank", type=int, default=8, help="LoRA attention dimension (rank)")
-    parser.add_argument("--alpha", type=int, default=8, help="LoRA alpha parameter")
+    parser.add_argument("--alpha", type=int, default=16, help="LoRA alpha parameter")
     args = parser.parse_args()
     args.model_output_dir = f"{args.output_dir}/{args.model_name.split('/')[-1]}_{args.experiment_name}"
     return args
