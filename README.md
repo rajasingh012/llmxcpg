@@ -1,4 +1,4 @@
-# LLMxCPG
+# LLMxCPG: Context-Aware Vulnerability Detection Through Code Property Graph-Guided Large Language Models
 
 This repository contains the source code for **LLMxCPG**, a framework for vulnerability detection using Code Property Graphs (CPG) and Large Language Models (LLM).
 
