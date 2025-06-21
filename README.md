@@ -37,7 +37,7 @@ The core methodology involves a two-phase process:
 1. **Clone the repository:**
 
    ```
-   git clone [https://github.com/qcri/llmxcpg](https://github.com/qcri/llmxcpg)
+   git clone https://github.com/qcri/llmxcpg
    cd llmxcpg
    ```
 
@@ -62,5 +62,5 @@ The training process uses the [LLaMA-Factory](https://github.com/hiyouga/LLaMA-F
 If you use this codebase in your research, please cite the associated paper:
 
 ```
-TODO
+To appear in USENIX Security 2025
 ```
