@@ -283,7 +283,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run model inference on dataset")
     parser.add_argument('dataset', choices=['primevul', 'formai', 'reposvul', 'pkco', 'sven'],
                         help="Dataset to evaluate: primevul, formai, reposvul, pkco, or sven")
-    parser.add_argument('--base-model', required=True, help="Base model name or path")
+    parser.add_argument('--base-model', type=str, default="/workspace/QCRI__LLMxCPG-D", help="Base model name or path")
     parser.add_argument('--threshold', type=float, default=None, help="Classification threshold (default depends on dataset)")
     parser.add_argument('--output-dir', default=Config.OUTPUT_DIR, help="Directory to save output files")
     
