@@ -1,0 +1,10 @@
+torch
+numpy
+scikit-learn
+tqdm
+jsonlines
+transformers
+unsloth
+bitsandbytes
+huggingface_hub
+hf_transfer

@@ -25,7 +25,6 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 class Config:
-    """Configuration settings for the inference pipeline."""
     YES_TOKEN = "Yes"
     NO_TOKEN = "No"
     RANDOM_SEED = 42
@@ -101,26 +100,15 @@ class DataProcessor:
         return processed_data
 
 class ModelHandler:
-    """Handles model loading and setup."""
+    """Handles model loading and setup without LoRA."""
     def __init__(self, config: Config):
         self.config = config
 
-    def find_linear_modules(self, model) -> List[str]:
-        cls = bnb.nn.Linear4bit
-        lora_module_names = set()
-        for name, module in model.named_modules():
-            if isinstance(module, cls):
-                names = name.split('.')
-                lora_module_names.add(names[0] if len(names) == 1 else names[-1])
-            if 'lm_head' in lora_module_names:
-                lora_module_names.remove('lm_head')
-        return list(lora_module_names)
-
-    def load_model_and_tokenizer(self, model_path: str, base_model_name: str) -> Tuple[PreTrainedModel, PreTrainedTokenizer]:
+    def load_model_and_tokenizer(self, model_path: str) -> Tuple[PreTrainedModel, PreTrainedTokenizer]:
         logger.info(f"Loading model and tokenizer from {model_path}")
         
         model, tokenizer = FastLanguageModel.from_pretrained(
-            model_name=base_model_name,
+            model_name=model_path,
             max_seq_length=8128,
         )
         
@@ -128,28 +116,17 @@ class ModelHandler:
         no_token_id = tokenizer.encode(self.config.NO_TOKEN, add_special_tokens=False)[0]
         logger.info(f"Token IDs - Yes: {yes_token_id}, No: {no_token_id}")
         
-        # Setup model head
+        # Setup model head to only focus on Yes/No tokens
         model.lm_head.weight = torch.nn.Parameter(torch.vstack([
             model.lm_head.weight[no_token_id, :],
             model.lm_head.weight[yes_token_id, :]
         ]))
         
-        modules = self.find_linear_modules(model)
-        logger.info(f"Loaded Modules: {modules}")
-        
-        # Setup LoRA
-        model = FastLanguageModel.get_peft_model(
-            model,
-            target_modules=modules,
-            random_state=self.config.RANDOM_SEED,
-            **self.config.LORA_CONFIG
-        )
-        
-        model.load_adapter(model_path, adapter_name="default")
         FastLanguageModel.for_inference(model)
         model.eval()
         
         return model, tokenizer
+
 
 class InferenceEngine:
     """Handles the inference process."""
@@ -303,14 +280,37 @@ class ResultsHandler:
             f.write(f"{model}\t{dataset}\t{results['threshold']}\t{results['accuracy']}\t{results['precision']}\t{results['recall']}\t{results['f1']}\t{results['total_samples']}\n")
 
 def parse_args():
-    """Parse command line arguments."""
-    parser = argparse.ArgumentParser(description="Run model inference with a specified threshold")
+    parser = argparse.ArgumentParser(description="Run model inference on dataset")
+    parser.add_argument('dataset', choices=['primevul', 'formai', 'reposvul', 'pkco', 'sven'],
+                        help="Dataset to evaluate: primevul, formai, reposvul, pkco, or sven")
     parser.add_argument('--base-model', required=True, help="Base model name or path")
-    parser.add_argument('--model-path', required=True, help="Path to the LoRA adapters")
-    parser.add_argument('--dataset-path', required=True, help="Path to the dataset JSON file")
-    parser.add_argument('--threshold', type=float, default=0.5, help="Classification threshold")
+    parser.add_argument('--threshold', type=float, default=None, help="Classification threshold (default depends on dataset)")
     parser.add_argument('--output-dir', default=Config.OUTPUT_DIR, help="Directory to save output files")
-    return parser.parse_args()
+    
+    args = parser.parse_args()
+
+    dataset_files = {
+        'primevul': './../data/primevul_test.json',
+        'formai': './../data/formai_test.json',
+        'reposvul': './../data/reposvul_test.json',
+        'pkco': './../data/pkco_test.json',
+        'sven': './../data/sven_test.json'
+    }
+
+    default_thresholds = {
+        'formai': 0.547,
+        'reposvul': 0.191,
+        'primevul': 0.594,
+        'sven': 0.33,
+        'pkco': 0.32
+    }
+
+    args.dataset_path = dataset_files[args.dataset]
+    if args.threshold is None:
+        args.threshold = default_thresholds[args.dataset]
+
+    return args
+
 
 def main():
     """Main execution function."""
@@ -320,7 +320,7 @@ def main():
         
         # Initialize components
         model_handler = ModelHandler(config)
-        model, tokenizer = model_handler.load_model_and_tokenizer(args.model_path, args.base_model)
+        model, tokenizer = model_handler.load_model_and_tokenizer(args.base_model)
         
         # Load and process data
         data = DataProcessor.load_data(args.dataset_path)
