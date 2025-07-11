@@ -38,6 +38,10 @@ class Config:
         'bias': "none",
         'use_gradient_checkpointing': True
     }
+    # Threshold search parameters
+    THRESHOLD_MIN = 0.1
+    THRESHOLD_MAX = 0.9
+    THRESHOLD_STEP = 0.01
 
 class DataProcessor:
     """Handles data loading and preprocessing."""
@@ -270,10 +274,37 @@ class MetricsCalculator:
             'total_samples': len(predictions)
         }
 
+    @staticmethod
+    def find_optimal_threshold(results: List[Dict], config: Config) -> Tuple[float, Dict]:
+        """Find the optimal threshold that maximizes accuracy."""
+        logger.info("Finding optimal threshold...")
+        
+        best_threshold = config.THRESHOLD_MIN
+        best_metrics = None
+        best_accuracy = 0.0
+        
+        threshold_results = []
+        
+        # Test thresholds from min to max with given step
+        thresholds = np.arange(config.THRESHOLD_MIN, config.THRESHOLD_MAX + config.THRESHOLD_STEP, config.THRESHOLD_STEP)
+        
+        for threshold in tqdm(thresholds, desc="Testing thresholds"):
+            metrics = MetricsCalculator.compute_metrics(results, threshold)
+            threshold_results.append(metrics)
+            
+            if metrics['accuracy'] > best_accuracy:
+                best_accuracy = metrics['accuracy']
+                best_threshold = threshold
+                best_metrics = metrics
+        
+        logger.info(f"Optimal threshold found: {best_threshold:.3f} with accuracy: {best_accuracy:.4f}")
+        
+        return best_threshold, best_metrics, threshold_results
+
 class ResultsHandler:
     """Handles saving and logging results."""
     @staticmethod
-    def save_results(results: List[Dict], metrics: Dict, base_model: str, dataset_path: str, output_dir: str):
+    def save_results(results: List[Dict], metrics: Dict, base_model: str, dataset_path: str, output_dir: str, threshold_results: List[Dict] = None):
         model_name = base_model.split('/')[-1]
         dataset_name = dataset_path.split("/")[-1].replace(".json", "")
         base_filename = f"{model_name}_{dataset_name}"
@@ -294,21 +325,34 @@ class ResultsHandler:
         metrics_file = os.path.join(output_dir, f'{base_filename}_metrics.tsv')
         with open(metrics_file, 'w') as f:
             f.write(f"model\tdataset\tthreshold\taccuracy\tprecision\trecall\tf1\ttotal_samples\n")
-            f.write(f"{model_name}\t{dataset_name}\t{metrics['threshold']}\t{metrics['accuracy']}\t{metrics['precision']}\t{metrics['recall']}\t{metrics['f1']}\t{metrics['total_samples']}\n")
+            f.write(f"{model_name}\t{dataset_name}\t{metrics['threshold']:.3f}\t{metrics['accuracy']:.4f}\t{metrics['precision']:.4f}\t{metrics['recall']:.4f}\t{metrics['f1']:.4f}\t{metrics['total_samples']}\n")
+        
+        # Save threshold search results if provided
+        if threshold_results:
+            threshold_file = os.path.join(output_dir, f'{base_filename}_threshold_search.tsv')
+            with open(threshold_file, 'w') as f:
+                f.write("threshold\taccuracy\tprecision\trecall\tf1\ttp\tfp\tfn\ttn\n")
+                for result in threshold_results:
+                    cm = result['confusion_matrix']
+                    f.write(f"{result['threshold']:.3f}\t{result['accuracy']:.4f}\t{result['precision']:.4f}\t{result['recall']:.4f}\t{result['f1']:.4f}\t{cm['tp']}\t{cm['fp']}\t{cm['fn']}\t{cm['tn']}\n")
 
     @staticmethod
     def log_results(model: str, results: dict, dataset: str):
         with open("final_inference_results.tsv", "a") as f:
-            f.write(f"{model}\t{dataset}\t{results['threshold']}\t{results['accuracy']}\t{results['precision']}\t{results['recall']}\t{results['f1']}\t{results['total_samples']}\n")
+            f.write(f"{model}\t{dataset}\t{results['threshold']:.3f}\t{results['accuracy']:.4f}\t{results['precision']:.4f}\t{results['recall']:.4f}\t{results['f1']:.4f}\t{results['total_samples']}\n")
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="Run model inference on dataset")
+    parser = argparse.ArgumentParser(description="Run model inference on dataset with optimal threshold finding (optimized for accuracy)")
     parser.add_argument('dataset', choices=['primevul', 'formai', 'reposvul', 'pkco', 'sven'],
                         help="Dataset to evaluate: primevul, formai, reposvul, pkco, or sven")
     parser.add_argument('--base-model', type=str, default="/workspace/QwQ-32B-Preview", help="Get the model from Qwen/QwQ-32B-Preview on HF")
     parser.add_argument('--model-path', type=str, default="/workspace/QCRI__LLMxCPG-D", help="Get the model from QCRI/LLMxCPG-D on HF")
-    parser.add_argument('--threshold', type=float, default=None, help="Classification threshold (default depends on dataset)")
+    parser.add_argument('--threshold', type=float, default=None, help="Specific threshold to use (if not provided, optimal threshold will be found)")
     parser.add_argument('--output-dir', default=Config.OUTPUT_DIR, help="Directory to save output files")
+    parser.add_argument('--threshold-min', type=float, default=0.1, help="Minimum threshold for search")
+    parser.add_argument('--threshold-max', type=float, default=0.9, help="Maximum threshold for search")
+    parser.add_argument('--threshold-step', type=float, default=0.01, help="Step size for threshold search")
+    parser.add_argument('--find-optimal', action='store_true', help="Find optimal threshold that maximizes accuracy instead of using default")
     
     args = parser.parse_args()
 
@@ -329,8 +373,15 @@ def parse_args():
     }
 
     args.dataset_path = dataset_files[args.dataset]
-    if args.threshold is None:
+    
+    # Set threshold strategy
+    if args.threshold is None and not args.find_optimal:
         args.threshold = default_thresholds[args.dataset]
+        args.find_optimal = False
+    elif args.threshold is None and args.find_optimal:
+        args.threshold = None
+    else:
+        args.find_optimal = False
 
     return args
 
@@ -340,6 +391,11 @@ def main():
     try:
         args = parse_args()
         config = Config()
+        
+        # Update config with command line arguments
+        config.THRESHOLD_MIN = args.threshold_min
+        config.THRESHOLD_MAX = args.threshold_max
+        config.THRESHOLD_STEP = args.threshold_step
         
         # Initialize components
         model_handler = ModelHandler(config)
@@ -352,10 +408,18 @@ def main():
         grouped_inputs = InferenceEngine.prepare_batches(data, tokenizer, config.BATCH_SIZE)
         results = InferenceEngine.run_inference(model, grouped_inputs, config.BATCH_SIZE)
         
-        # Calculate metrics with given threshold
-        metrics = MetricsCalculator.compute_metrics(results, threshold=args.threshold)
+        # Find optimal threshold or use specified threshold
+        threshold_results = None
+        if args.find_optimal:
+            optimal_threshold, metrics, threshold_results = MetricsCalculator.find_optimal_threshold(results, config)
+            logger.info(f"\nOptimal threshold found: {optimal_threshold:.3f}")
+        else:
+            threshold = args.threshold
+            metrics = MetricsCalculator.compute_metrics(results, threshold=threshold)
+            logger.info(f"\nUsing specified threshold: {threshold:.3f}")
         
-        logger.info("\nMetrics with threshold {:.2f}:".format(args.threshold))
+        # Log results
+        logger.info("\nFinal Metrics:")
         for k, v in metrics.items():
             if isinstance(v, dict):
                 logger.info(f"{k}:")
@@ -365,7 +429,7 @@ def main():
                 logger.info(f"{k}: {v}")
         
         # Save results
-        ResultsHandler.save_results(results, metrics, args.base_model, args.dataset_path, args.output_dir)
+        ResultsHandler.save_results(results, metrics, args.base_model, args.dataset_path, args.output_dir, threshold_results)
         ResultsHandler.log_results(
             model=args.base_model,
             results=metrics,

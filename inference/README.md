@@ -18,6 +18,13 @@ conda create --name llmxcpg \
 conda activate llmxcpg
 ```
 
+Clone the repository:
+
+```bash
+git clone https://github.com/QCRI/llmxcpg.git
+cd llmxcpg
+```
+
 Then install Python dependencies:
 
 ```bash
@@ -37,7 +44,7 @@ Datasets: `formai`, `primevul`, `reposvul`, `pkco`, `sven`.
 Example:
 
 ```bash
-python3 detect_inference.py formai
+python3 detect_inference.py formai --base-model /workspace/QwQ-32B-Preview --model_path /workspace/QCRI__LLMxCPG-D
 ```
 
 You can also override the default threshold for the dataset:
