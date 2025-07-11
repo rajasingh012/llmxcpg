@@ -52,3 +52,10 @@ You can also override the default threshold for the dataset:
 ```bash
 python3 detect_inference.py formai --threshold 0.6
 ```
+
+You can also find the optimal threshold for your dataset:
+
+
+```bash
+python3 detect_inference.py formai --find-optimal
+```
