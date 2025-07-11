@@ -29,7 +29,7 @@ pip install -r requirements.txt
 Run inference on any supported dataset:
 
 ```bash
-python3 detect_inference.py <dataset> --base-model QCRI/LLMxCPG-D
+python3 detect_inference.py <dataset> --base-model Qwen/QwQ-32B-Preview --model_path QCRI/LLMxCPG-D
 ```
 
 Datasets: `formai`, `primevul`, `reposvul`, `pkco`, `sven`.
@@ -37,5 +37,11 @@ Datasets: `formai`, `primevul`, `reposvul`, `pkco`, `sven`.
 Example:
 
 ```bash
-python3 detect_inference.py formai --base-model /workspace/QCRI__LLMxCPG-D
+python3 detect_inference.py formai
+```
+
+You can also override the default threshold for the dataset:
+
+```bash
+python3 detect_inference.py formai --threshold 0.6
 ```

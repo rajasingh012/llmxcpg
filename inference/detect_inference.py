@@ -100,33 +100,55 @@ class DataProcessor:
         return processed_data
 
 class ModelHandler:
-    """Handles model loading and setup without LoRA."""
+    """Handles model loading and setup."""
     def __init__(self, config: Config):
         self.config = config
 
-    def load_model_and_tokenizer(self, model_path: str) -> Tuple[PreTrainedModel, PreTrainedTokenizer]:
+    def find_linear_modules(self, model) -> List[str]:
+        cls = bnb.nn.Linear4bit
+        lora_module_names = set()
+        for name, module in model.named_modules():
+            if isinstance(module, cls):
+                names = name.split('.')
+                lora_module_names.add(names[0] if len(names) == 1 else names[-1])
+            if 'lm_head' in lora_module_names:
+                lora_module_names.remove('lm_head')
+        return list(lora_module_names)
+
+    def load_model_and_tokenizer(self, model_path: str, base_model_name: str) -> Tuple[PreTrainedModel, PreTrainedTokenizer]:
         logger.info(f"Loading model and tokenizer from {model_path}")
         
         model, tokenizer = FastLanguageModel.from_pretrained(
-            model_name=model_path,
-            max_seq_length=8128,
+            model_name=base_model_name,
+            max_seq_length=16384,
         )
         
         yes_token_id = tokenizer.encode(self.config.YES_TOKEN, add_special_tokens=False)[0]
         no_token_id = tokenizer.encode(self.config.NO_TOKEN, add_special_tokens=False)[0]
         logger.info(f"Token IDs - Yes: {yes_token_id}, No: {no_token_id}")
         
-        # Setup model head to only focus on Yes/No tokens
+        # Setup model head
         model.lm_head.weight = torch.nn.Parameter(torch.vstack([
             model.lm_head.weight[no_token_id, :],
             model.lm_head.weight[yes_token_id, :]
         ]))
         
+        modules = self.find_linear_modules(model)
+        logger.info(f"Loaded Modules: {modules}")
+        
+        # Setup LoRA
+        model = FastLanguageModel.get_peft_model(
+            model,
+            target_modules=modules,
+            random_state=self.config.RANDOM_SEED,
+            **self.config.LORA_CONFIG
+        )
+        
+        model.load_adapter(model_path, adapter_name="default")
         FastLanguageModel.for_inference(model)
         model.eval()
         
         return model, tokenizer
-
 
 class InferenceEngine:
     """Handles the inference process."""
@@ -283,7 +305,8 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run model inference on dataset")
     parser.add_argument('dataset', choices=['primevul', 'formai', 'reposvul', 'pkco', 'sven'],
                         help="Dataset to evaluate: primevul, formai, reposvul, pkco, or sven")
-    parser.add_argument('--base-model', type=str, default="/workspace/QCRI__LLMxCPG-D", help="Get the model from QCRI/LLMxCPG-D on HF")
+    parser.add_argument('--base-model', type=str, default="/workspace/QwQ-32B-Preview", help="Get the model from Qwen/QwQ-32B-Preview on HF")
+    parser.add_argument('--model-path', type=str, default="/workspace/QCRI__LLMxCPG-D", help="Get the model from QCRI/LLMxCPG-D on HF")
     parser.add_argument('--threshold', type=float, default=None, help="Classification threshold (default depends on dataset)")
     parser.add_argument('--output-dir', default=Config.OUTPUT_DIR, help="Directory to save output files")
     
@@ -299,9 +322,9 @@ def parse_args():
 
     default_thresholds = {
         'formai': 0.547,
-        'reposvul': 0.191,
+        'reposvul': 0.307,
         'primevul': 0.594,
-        'sven': 0.33,
+        'sven': 0.334,
         'pkco': 0.32
     }
 
@@ -320,7 +343,7 @@ def main():
         
         # Initialize components
         model_handler = ModelHandler(config)
-        model, tokenizer = model_handler.load_model_and_tokenizer(args.base_model)
+        model, tokenizer = model_handler.load_model_and_tokenizer(args.model_path, args.base_model)
         
         # Load and process data
         data = DataProcessor.load_data(args.dataset_path)
