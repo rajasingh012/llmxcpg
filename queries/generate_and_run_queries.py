@@ -5,8 +5,7 @@ import threading
 import time
 import argparse
 import logging
-from typing import List, Dict, Tuple, Any
-from Utils.prompts import gen_query_final_prompt
+from typing import List, Dict
 from Components.model import LLMManager
 from Components.joern_manager import JoernManager
 
@@ -14,6 +13,43 @@ from Components.joern_manager import JoernManager
 logging.basicConfig(level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(threadName)s - %(message)s',
                     handlers=[logging.StreamHandler(sys.stdout)])
+
+def gen_query_prompt(code: str):
+    instruction = """Your task is to design Precise Joern CPGQL Queries for Vulnerability Analysis.
+
+Objective:
+Develop targeted CPGQL Joern queries to:
+1. Identify taint flows based on your analysis
+2. Capture potential vulnerability paths
+
+Constraints:
+- Queries must be executable in Joern/CPGQL
+- Use Scala language features for query construction
+- Last query must use reachableByFlows to identify vulnerable paths
+
+Output Requirements:
+- Provide a JSON object with one field:
+  "queries": Sequence of CPGQL queries to detect vulnerability
+
+Expected JSON Output Format:
+```json
+{
+  "queries": ["Query1", "Query2", ..., "Final Reachable Flows Query"]
+}
+```
+
+Example Output:
+```json
+{
+  "queries": [
+    "val freeCallsWithIdentifier = cpg.method.name("(.*_)?free").filter(_.parameter.size == 1).callIn.where(_.argument(1).isIdentifier).l",
+    "freeCallsWithIdentifier.flatMap(f => {val freedIdentifierCode = f.argument(1).code; val postDom = f.postDominatedBy.toSetImmutable; val assignedPostDom = postDom.isIdentifier.where(_.inAssignment).codeExact(freedIdentifierCode).flatMap(id => id ++ id.postDominatedBy); postDom.removedAll(assignedPostDom).isIdentifier.codeExact(freedIdentifierCode).reachableByFlows(f.argument(1))}).l"
+  ]
+}
+```
+""" 
+    prompt = f"{instruction}\nInput:\n{code}"
+    return prompt
 
 class DatasetProcessor:
     """
@@ -201,7 +237,7 @@ class DatasetProcessor:
 
             # --- Generate CPGQL queries using LLM ---
             self._log_sample_message(logging.DEBUG, "Generating CPGQL queries using LLM.")
-            prompt = gen_query_final_prompt(code_content)
+            prompt = gen_query_prompt(code_content)
             message_history = [{"role": "user", "content": prompt}]
 
             llm_response = self.llm_manager.send_messages(message_history)
