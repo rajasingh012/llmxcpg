@@ -55,7 +55,7 @@ The models can be fine-tuned using the scripts provided in the `training/` direc
 
 * **Detection Model (`LLMxCPG-D`)**: Fine-tuned from `QwQ-32B-Preview`.
 
-The training process uses the [LLaMA-Factory](https://github.com/hiyouga/LLaMA-Factory) framework and employs Low-Rank Adaptation (LoRA) for efficient fine-tuning. Refer to the scripts and configurations in the `training/` directory for details.
+The training process uses the [Unsloth](https://unsloth.ai) framework and employs Low-Rank Adaptation (LoRA) for efficient fine-tuning. Refer to the scripts and configurations in the `training/` directory for details.
 
 ## Citation
 
