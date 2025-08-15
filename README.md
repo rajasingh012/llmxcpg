@@ -24,9 +24,9 @@ The core methodology involves a two-phase process:
 
 ## Getting Started
 
-### Models:
+### Models
 
-Our finetuned models (e.g., LLMxCPG-Q and LLMxCPG-D) are available on Hugging Face at: 🤗 [LLMxCPG Collection](https://huggingface.co/collections/QCRI/llmxcpg-6855f80e601774b43eba2d14).
+Our finetuned models (i.e., LLMxCPG-Q and LLMxCPG-D) are available on Hugging Face at: 🤗 [LLMxCPG Collection](https://huggingface.co/collections/QCRI/llmxcpg-6855f80e601774b43eba2d14).
 
 ### Prerequisites
 
