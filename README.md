@@ -34,7 +34,7 @@ Our finetuned models (i.e., LLMxCPG-Q and LLMxCPG-D) are available on Hugging Fa
 
 * Python 3.8+
 
-* [Joern](https://joern.io/) (for CPG generation and querying)
+* [Joern](https://joern.io/) - for CPG generation and querying (tested with v4.0.408)
 
 ### Installation
 
