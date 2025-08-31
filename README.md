@@ -61,6 +61,10 @@ The models can be fine-tuned using the scripts provided in the `training/` direc
 
 The training process uses the [Unsloth](https://unsloth.ai) framework and employs Low-Rank Adaptation (LoRA) for efficient fine-tuning. Refer to the scripts and configurations in the `training/` directory for details.
 
+## Issues
+
+If you encounter any issues with our codebase, please open an issue in the repository. This is the most effective way for us to assist you.
+
 ## Citation
 
 If you use this codebase in your research, please cite the associated paper:
