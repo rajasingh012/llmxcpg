@@ -10,7 +10,7 @@ The core methodology involves a two-phase process:
 
 ## Issues
 
-If you encounter any issues with our codebase, please open an issue in the repository. This is the most effective way for us to assist you.
+If you encounter any issues with our codebase, please **open an issue in the repository**. This is the most effective way for us to assist you.
 
 ## Repository Structure
 
