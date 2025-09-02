@@ -8,6 +8,10 @@ The core methodology involves a two-phase process:
 
 2. **Vulnerability Detection**: A second LLM analyzes the extracted code slice to classify it as either vulnerable or safe.
 
+## Issues
+
+If you encounter any issues with our codebase, please open an issue in the repository. This is the most effective way for us to assist you.
+
 ## Repository Structure
 
 ```
@@ -61,9 +65,6 @@ The models can be fine-tuned using the scripts provided in the `training/` direc
 
 The training process uses the [Unsloth](https://unsloth.ai) framework and employs Low-Rank Adaptation (LoRA) for efficient fine-tuning. Refer to the scripts and configurations in the `training/` directory for details.
 
-## Issues
-
-If you encounter any issues with our codebase, please open an issue in the repository. This is the most effective way for us to assist you.
 
 ## Citation
 
